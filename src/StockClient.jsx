@@ -171,44 +171,69 @@ const StockClient = () => {
         return () => clearInterval(interval);
     }, []);
 
-    const renderStockList = (title, stockArray) => (
-        <div className="stock-section" key={title}>
-            <h3 className="stock-title">
-                {title}
-                {countdown && (
-                    <span className="stock-timer-inline">
-                        &nbsp;{countdown}
-                    </span>
-                )}
-            </h3>
-            <ul className="stock-grid">
-                {stockArray.map((item, index) => (
-                    <li
-                        key={`${item.item_id}-${item.Date_Start}-${index}`}
-                        className="stock-card"
-                    >
-                        <img
-                            src={item.icon}
-                            alt={item.display_name}
-                            className="stock-icon"
-                        />
-                        <div className="stock-info">
-                            <div className="stock-name">
-                                {item.display_name}
+    const renderStockList = (title, stockArray) => {
+        const typeKey = title.toLowerCase(); // ex: EGG -> egg
+        let refreshTime = null;
+
+        if (typeKey === "egg") {
+            refreshTime = getNextRefreshTime("egg");
+        } else if (typeKey === "cosmetic") {
+            refreshTime = getNextRefreshTime("cosmetic");
+        }
+
+        const refreshCountdown =
+            refreshTime && !isNaN(refreshTime)
+                ? Math.max(0, refreshTime.getTime() - Date.now())
+                : null;
+
+        const refreshDisplay =
+            refreshCountdown !== null
+                ? `Next Refresh: ${Math.floor(refreshCountdown / 60000)} min`
+                : countdown
+                ? countdown
+                : null;
+
+        return (
+            <div className="stock-section" key={title}>
+                <h3 className="stock-title">
+                    {title}
+                    {refreshDisplay && (
+                        <span className="stock-timer-inline">
+                            &nbsp;{refreshDisplay}
+                        </span>
+                    )}
+                </h3>
+                <ul className="stock-grid">
+                    {stockArray.map((item, index) => (
+                        <li
+                            key={`${item.item_id}-${item.Date_Start}-${index}`}
+                            className="stock-card"
+                        >
+                            <img
+                                src={item.icon}
+                                alt={item.display_name}
+                                className="stock-icon"
+                            />
+                            <div className="stock-info">
+                                <div className="stock-name">
+                                    {item.display_name}
+                                </div>
+                                <div className="stock-qty">
+                                    Qty: {item.quantity}
+                                </div>
+                                <div className="stock-meta">
+                                    ID: {item.item_id} | Ends:{" "}
+                                    {new Date(
+                                        item.Date_End
+                                    ).toLocaleTimeString()}
+                                </div>
                             </div>
-                            <div className="stock-qty">
-                                Qty: {item.quantity}
-                            </div>
-                            <div className="stock-meta">
-                                ID: {item.item_id} | Ends:{" "}
-                                {new Date(item.Date_End).toLocaleTimeString()}
-                            </div>
-                        </div>
-                    </li>
-                ))}
-            </ul>
-        </div>
-    );
+                        </li>
+                    ))}
+                </ul>
+            </div>
+        );
+    };
 
     const renderWeather = () => (
         <div className="stock-section">
@@ -347,6 +372,29 @@ const StockClient = () => {
             alert("Preferences saved.");
             setEditModalOpen(false);
         }
+    };
+    const getNextRefreshTime = (type) => {
+        const now = new Date();
+
+        if (type === "egg") {
+            // Pet stock: every 30 minutes
+            const minutes = now.getMinutes();
+            const nextHalfHour = minutes < 30 ? 30 : 60;
+            const next = new Date(now);
+            next.setMinutes(nextHalfHour, 0, 0);
+            return next;
+        }
+
+        if (type === "cosmetic") {
+            // Cosmetic stock: every 4 hours starting at 0, 4, 8, 12, 16, 20
+            const currentHour = now.getHours();
+            const nextHourBlock = Math.ceil((currentHour + 1) / 4) * 4;
+            const next = new Date(now);
+            next.setHours(nextHourBlock, 0, 0, 0);
+            return next;
+        }
+
+        return null;
     };
 
     return (
