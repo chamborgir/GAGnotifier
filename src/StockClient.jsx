@@ -65,6 +65,34 @@ const StockClient = () => {
                     }
                 });
 
+                const syncNewStockItems = async (items, type) => {
+                    if (!Array.isArray(items)) return;
+
+                    const inserts = items.map((item) => ({
+                        item_id: item.item_id,
+                        item_name: item.display_name,
+                        type,
+                        icon_url: item.icon || null,
+                    }));
+
+                    for (const entry of inserts) {
+                        // Try insert; if already exists, ignore
+                        await supabase
+                            .from("all_stock_items")
+                            .upsert(entry, { onConflict: "item_id" }); // won't insert duplicate
+                    }
+                };
+
+                if (Array.isArray(parsed.seed_stock)) {
+                    syncNewStockItems(parsed.seed_stock, "seed");
+                }
+                if (Array.isArray(parsed.gear_stock)) {
+                    syncNewStockItems(parsed.gear_stock, "gear");
+                }
+                if (Array.isArray(parsed.egg_stock)) {
+                    syncNewStockItems(parsed.egg_stock, "egg");
+                }
+
                 // ✅ Compute soonest expiration time AFTER filtering
                 const allItems = Object.values(filtered).flat();
                 if (allItems.length > 0) {
@@ -316,21 +344,8 @@ const StockClient = () => {
         await supabase.auth.signOut();
     };
 
-    const handleEditPreferences = () => {
-        const combined = [
-            ...(allStock.seed_stock || []),
-            ...(allStock.gear_stock || []),
-        ];
-        const deduped = Object.values(
-            combined.reduce((acc, item) => {
-                acc[item.item_id] = {
-                    ...item,
-                    type: item.item_id.includes("seed") ? "seed" : "gear",
-                };
-                return acc;
-            }, {})
-        );
-        setAvailablePreferences(deduped);
+    const handleEditPreferences = async () => {
+        await fetchAllAvailableItems(); // ✅ pull data from Supabase
         setEditModalOpen(true);
     };
 
@@ -395,6 +410,19 @@ const StockClient = () => {
         }
 
         return null;
+    };
+
+    const fetchAllAvailableItems = async () => {
+        const { data, error } = await supabase
+            .from("all_stock_items")
+            .select("*")
+            .in("type", ["seed", "gear", "egg"]);
+
+        if (!error) {
+            setAvailablePreferences(data);
+        } else {
+            console.error("Error fetching available items:", error.message);
+        }
     };
 
     return (
@@ -530,45 +558,74 @@ const StockClient = () => {
                             Choose what stocks you want to be notified about:
                         </p>
                         <div className="preferences-scroll">
-                            {availablePreferences
-                                .filter((item) =>
-                                    ["seed", "gear"].includes(item.type)
-                                )
-                                .map((item) => (
+                            {["seed", "gear", "egg"].map((type) => {
+                                const filtered = availablePreferences.filter(
+                                    (item) => item.type === type
+                                );
+                                if (filtered.length === 0) return null;
+
+                                return (
                                     <div
-                                        key={item.item_id}
-                                        className="preferences-item"
+                                        key={type}
+                                        className="preferences-group"
                                     >
-                                        <label>
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedPreferences.includes(
-                                                    item.item_id
-                                                )}
-                                                onChange={(e) => {
-                                                    const checked =
-                                                        e.target.checked;
-                                                    setSelectedPreferences(
-                                                        (prev) =>
-                                                            checked
-                                                                ? [
-                                                                      ...prev,
-                                                                      item.item_id,
-                                                                  ]
-                                                                : prev.filter(
-                                                                      (id) =>
-                                                                          id !==
-                                                                          item.item_id
-                                                                  )
-                                                    );
-                                                }}
-                                            />
-                                            &nbsp;{item.display_name} (
-                                            {item.type})
-                                        </label>
+                                        <h4 className="preferences-group-title">
+                                            {type.toUpperCase()} STOCKS
+                                        </h4>
+                                        {filtered.map((item) => (
+                                            <div
+                                                className="preferences-item"
+                                                key={item.item_id}
+                                            >
+                                                <div className="preference-left">
+                                                    <img
+                                                        src={item.icon_url}
+                                                        alt={
+                                                            item.item_name ||
+                                                            item.item_id
+                                                        }
+                                                        className="preference-icon"
+                                                    />
+                                                    <span className="preference-name">
+                                                        {item.item_name ||
+                                                            item.item_id}
+                                                    </span>
+                                                </div>
+                                                <div className="preference-checkbox">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedPreferences.includes(
+                                                            item.item_id
+                                                        )}
+                                                        onChange={(e) => {
+                                                            const checked =
+                                                                e.target
+                                                                    .checked;
+                                                            setSelectedPreferences(
+                                                                (prev) =>
+                                                                    checked
+                                                                        ? [
+                                                                              ...prev,
+                                                                              item.item_id,
+                                                                          ]
+                                                                        : prev.filter(
+                                                                              (
+                                                                                  id
+                                                                              ) =>
+                                                                                  id !==
+                                                                                  item.item_id
+                                                                          )
+                                                            );
+                                                        }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
-                                ))}
+                                );
+                            })}
                         </div>
+
                         <div className="preferences-buttons">
                             <button
                                 className="auth-button"

@@ -264,35 +264,150 @@
 /* PREFERENCE MODAL */
 /* Edit Preferences Modal */
 
-.preferences-modal {
-    width: 350px;
-    max-height: 80vh;
-    overflow-y: auto;
+.preferences-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px;
+  border-bottom: 1px solid #f0f0f0;
+  gap: 10px;
 }
 
-.preferences-description {
-    font-size: 0.9rem;
-    color: #cbd5e1;
-    margin-top: 0.25rem;
-    margin-bottom: 0.75rem;
+.preference-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  overflow: hidden;
 }
 
+.preference-icon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.preference-name {
+  font-size: 0.95rem;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.preference-checkbox {
+  flex-shrink: 0;
+}
 .preferences-scroll {
-    max-height: 300px;
-    overflow-y: auto;
-    text-align: left;
-    padding-right: 0.25rem;
+  max-height: 340px;
+  overflow-y: auto;
+  padding: 0.5rem;
+  background-color: #f9f9f9;
+  border-radius: 6px;
+  border: 1px solid #e5e5e5;
+}
+
+.preferences-group {
+  margin-bottom: 1rem;
+}
+
+.preferences-group-title {
+  margin-bottom: 6px;
+  font-size: 1rem;
+  color: #333;
+  font-weight: 600;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 4px;
 }
 
 .preferences-item {
-    margin-bottom: 0.4rem;
-    font-size: 0.95rem;
-    color: #f1f5f9;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 4px;
+  gap: 10px;
 }
 
-.preferences-buttons {
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-top: 1rem;
+.preference-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.preference-icon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.preference-name {
+  font-size: 0.95rem;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.preference-checkbox {
+  flex-shrink: 0;
+}
+.preferences-scroll {
+  max-height: 340px;
+  overflow-y: auto;
+  padding: 0.5rem;
+  background-color: #f9f9f9;
+  border-radius: 6px;
+  border: 1px solid #e5e5e5;
+}
+
+.preferences-group {
+  margin-bottom: 1rem;
+}
+
+.preferences-group-title {
+  margin-bottom: 6px;
+  font-size: 1rem;
+  color: #333;
+  font-weight: 600;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 4px;
+}
+
+.preferences-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 4px;
+  gap: 10px;
+}
+
+.preference-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.preference-icon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.preference-name {
+  font-size: 0.95rem;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.preference-checkbox {
+  flex-shrink: 0;
 }
