@@ -392,6 +392,13 @@ const StockClient = () => {
                     const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
                     console.log("🔑 Using VAPID key:", vapidKey);
 
+                    if (!vapidKey || typeof vapidKey !== "string") {
+                        console.error(
+                            "❌ VAPID public key is missing or invalid!",
+                            vapidKey
+                        );
+                    }
+
                     const newSub = await registration.pushManager.subscribe({
                         userVisibleOnly: true,
                         applicationServerKey: urlBase64ToUint8Array(vapidKey),
