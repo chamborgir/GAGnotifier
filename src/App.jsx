@@ -3,6 +3,9 @@ import Login from "./Login";
 import Signup from "./Signup";
 import StockClient from "./StockClient";
 
+
+
+
 function App() {
     return (
         <Router>

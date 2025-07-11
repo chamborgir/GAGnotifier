@@ -3,6 +3,21 @@ import { supabase } from "./supabaseClient";
 
 import "./StockClient.css";
 
+function urlBase64ToUint8Array(base64String) {
+    const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding)
+        .replace(/\-/g, "+")
+        .replace(/_/g, "/");
+
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+
 const StockClient = () => {
     const [allStock, setAllStock] = useState({});
     const [weather, setWeather] = useState(null);
@@ -33,6 +48,8 @@ const StockClient = () => {
 
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [notifiedItems, setNotifiedItems] = useState(new Set());
+
+    const [subscription, setSubscription] = useState(null);
 
     useEffect(() => {
         const userId = "911260968980447293";
@@ -112,6 +129,28 @@ const StockClient = () => {
                     ...prev,
                     ...filtered,
                 }));
+
+                if (user && subscription) {
+                    const currentItems = Object.values(filtered).flat();
+                    const matching = currentItems.filter((item) =>
+                        selectedPreferences.includes(item.item_id)
+                    );
+
+                    if (matching.length > 0) {
+                        for (const item of matching) {
+                            fetch("/api/sendNotification", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                    subscription,
+                                    title: "Stock Alert!",
+                                    body: `${item.display_name} is now available.`,
+                                    url: window.location.href,
+                                }),
+                            });
+                        }
+                    }
+                }
 
                 // ✅ Compare filtered stock to user preferences
                 if (user && selectedPreferences.length > 0) {
@@ -330,6 +369,42 @@ const StockClient = () => {
             } = await supabase.auth.getSession();
             setUser(session?.user || null);
         };
+
+        const urlBase64ToUint8Array = (base64String) => {
+            const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+            const base64 = (base64String + padding)
+                .replace(/-/g, "+")
+                .replace(/_/g, "/");
+            const rawData = atob(base64);
+            return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
+        };
+
+        if ("serviceWorker" in navigator && "PushManager" in window) {
+            navigator.serviceWorker.ready.then(async (registration) => {
+                try {
+                    const existing =
+                        await registration.pushManager.getSubscription();
+                    if (existing) {
+                        setSubscription(existing);
+                        return;
+                    }
+
+                    const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+                    console.log("🔑 Using VAPID key:", vapidKey);
+
+                    const newSub = await registration.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: urlBase64ToUint8Array(vapidKey),
+                    });
+
+                    console.log("✅ Push subscription created:", newSub);
+                    setSubscription(newSub);
+                } catch (err) {
+                    console.error("❌ Push subscription failed:", err);
+                }
+            });
+        }
+
         fetchSession();
 
         supabase.auth.onAuthStateChange((_event, session) => {
@@ -388,6 +463,21 @@ const StockClient = () => {
         };
 
         askPermissionOnce();
+    }, []);
+    useEffect(() => {
+        if ("serviceWorker" in navigator) {
+            navigator.serviceWorker
+                .register("/sw.js")
+                .then((reg) => {
+                    console.log("✅ Service worker registered:", reg.scope);
+                })
+                .catch((err) => {
+                    console.error(
+                        "❌ Service worker registration failed:",
+                        err
+                    );
+                });
+        }
     }, []);
 
     const handleLogout = async () => {

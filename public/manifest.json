@@ -1,0 +1,9 @@
+{
+  "name": "Grow a Garden Stock Notifier",
+  "short_name": "GardenStock",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#48bb78"
+ 
+}
