@@ -31,6 +31,9 @@ const StockClient = () => {
     const [nextExpiryTime, setNextExpiryTime] = useState(null);
     const [countdown, setCountdown] = useState("");
 
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [notifiedItems, setNotifiedItems] = useState(new Set());
+
     useEffect(() => {
         const userId = "911260968980447293";
         const ws = new WebSocket(
@@ -109,6 +112,36 @@ const StockClient = () => {
                     ...prev,
                     ...filtered,
                 }));
+
+                // ✅ Compare filtered stock to user preferences
+                if (user && selectedPreferences.length > 0) {
+                    const newMatchedItems = Object.values(filtered)
+                        .flat()
+                        .filter(
+                            (item) =>
+                                selectedPreferences.includes(item.item_id) &&
+                                !notifiedItems.has(item.item_id)
+                        );
+
+                    // Send notifications and update notifiedItems
+                    if (newMatchedItems.length > 0) {
+                        newMatchedItems.forEach((item) => {
+                            sendPushNotification(
+                                `🔔 ${item.display_name} is now in stock!`,
+                                {
+                                    body: `Ends at ${new Date(
+                                        item.Date_End
+                                    ).toLocaleTimeString()}`,
+                                    icon: item.icon,
+                                }
+                            );
+
+                            setNotifiedItems((prev) =>
+                                new Set(prev).add(item.item_id)
+                            );
+                        });
+                    }
+                }
 
                 if (Array.isArray(parsed.weather)) {
                     const activeWeather = parsed.weather.find((w) => w.active);
@@ -339,6 +372,23 @@ const StockClient = () => {
 
         setLoading(false);
     };
+    useEffect(() => {
+        if (!("Notification" in window)) return;
+
+        const askPermissionOnce = async () => {
+            const asked = localStorage.getItem("push_permission_requested");
+
+            if (!asked) {
+                const permission = await Notification.requestPermission();
+                if (permission !== "denied") {
+                    localStorage.setItem("push_permission_requested", "true");
+                }
+                console.log("🔔 Notification permission:", permission);
+            }
+        };
+
+        askPermissionOnce();
+    }, []);
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
@@ -348,6 +398,11 @@ const StockClient = () => {
         await fetchAllAvailableItems(); // ✅ pull data from Supabase
         setEditModalOpen(true);
     };
+    useEffect(() => {
+        if (countdown === "Refreshing...") {
+            setNotifiedItems(new Set()); // reset notifications
+        }
+    }, [countdown]);
 
     useEffect(() => {
         if (!user) return;
@@ -365,17 +420,21 @@ const StockClient = () => {
 
     const handleSavePreferences = async () => {
         if (!user) return;
+
+        // Clear existing preferences
         await supabase
             .from("stock_preferences")
             .delete()
             .eq("user_id", user.id);
 
-        const inserts = selectedPreferences.map((item) => {
-            const found = availablePreferences.find((i) => i.item_id === item);
+        const inserts = selectedPreferences.map((itemId) => {
+            const found = availablePreferences.find(
+                (i) => i.item_id === itemId
+            );
             return {
                 user_id: user.id,
                 item_id: found.item_id,
-                item_name: found.display_name,
+                item_name: found.item_name,
                 type: found.type,
             };
         });
@@ -383,11 +442,19 @@ const StockClient = () => {
         const { error } = await supabase
             .from("stock_preferences")
             .insert(inserts);
+        console.log("Payload:", inserts);
+
         if (!error) {
-            alert("Preferences saved.");
             setEditModalOpen(false);
+            setShowSuccessModal(true);
+
+            // Auto-close success modal after 2 seconds
+            setTimeout(() => setShowSuccessModal(false), 2000);
+        } else {
+            alert("Failed to save preferences.");
         }
     };
+
     const getNextRefreshTime = (type) => {
         const now = new Date();
 
@@ -422,6 +489,12 @@ const StockClient = () => {
             setAvailablePreferences(data);
         } else {
             console.error("Error fetching available items:", error.message);
+        }
+    };
+
+    const sendPushNotification = (title, options) => {
+        if (Notification.permission === "granted") {
+            new Notification(title, options);
         }
     };
 
@@ -640,6 +713,16 @@ const StockClient = () => {
                                 Cancel
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {showSuccessModal && (
+                <div className="modal-overlay">
+                    <div className="modal-centered toast-notification">
+                        <h3 style={{ textAlign: "center" }}>
+                            ✅ Saved Successfully
+                        </h3>
                     </div>
                 </div>
             )}
